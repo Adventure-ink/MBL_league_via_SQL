@@ -31,22 +31,12 @@ This project analyzes a baseball dataset to uncover trends in player development
 **Insight:** Schools in California, Texas, and Florida dominate due to robust athletic programs and year-round training climates.
 
 #### Top 3 Schools per Decade
-WITH university AS (
-    SELECT sd.name_full AS university, sd.city,
-           COUNT(DISTINCT(s.playerID)) AS players,
-           FLOOR(s.yearID/10)*10 AS decade 
-    FROM school_details sd 
-    LEFT JOIN schools s ON sd.schoolID = s.schoolID
-    WHERE FLOOR(s.yearID/10)*10 IS NOT NULL
-    GROUP BY university, sd.city, decade
-    ORDER BY decade
-),
-top_3 AS (
-    SELECT university, decade, players,
-           DENSE_RANK() OVER(PARTITION BY decade ORDER BY players DESC) AS ranking 
-    FROM university
-)
-SELECT * FROM top_3 WHERE ranking <= 3;
+
+![Screenshot 2025-03-31 110958](https://github.com/user-attachments/assets/14866f18-9e41-4599-991a-72323f52a251)
+
+**Result:**
+
+![Screenshot 2025-03-31 111247](https://github.com/user-attachments/assets/e248162e-a85c-4ee6-bd57-1027f0e2c9d9)
 
 
 **Insight:** Player production surged post-1960s, reflecting increased investment in college baseball.
@@ -60,48 +50,23 @@ SELECT * FROM top_3 WHERE ranking <= 3;
 
 ### Key Queries & Results
 #### Top 20% of Teams by Average Spending
-WITH annual_budget AS (
-    SELECT yearID, teamID, SUM(salary) AS Team_salary
-    FROM salaries
-    GROUP BY yearID, teamID
-    ORDER BY yearID, Team_salary DESC
-),
-avg_salary AS (
-    SELECT teamID, AVG(Team_salary) AS avg_team_salary,
-           NTILE(10) OVER(ORDER BY AVG(Team_salary) DESC) AS spend_pct
-    FROM annual_budget
-    GROUP BY teamID
-)
-SELECT teamID,
-       CONCAT("$", ROUND(avg_team_salary/1000000,2), " million") AS team_salary
-FROM avg_salary
-WHERE spend_pct <= 2;
 
-**Insight:** Large-market teams outspend others by 300–400%, correlating with higher revenue and performance.
+![Screenshot 2025-03-31 112033](https://github.com/user-attachments/assets/6bf2ddaf-be9d-4c44-b3b9-5b8980c031aa)
+
+**Result:**
+
+![Screenshot 2025-03-31 112257](https://github.com/user-attachments/assets/ad3eb91e-7e3f-44c4-8c24-3838d4837087)
+
+
+**Insight:** Large-market teams outspend others by 200-300%, correlating with higher revenue and performance.
 
 #### Cumulative Spending Over $1 Billion
-WITH team_salary AS (
-    SELECT yearID, teamID, SUM(salary) AS salary
-    FROM salaries
-    GROUP BY yearId, teamId
-),
-cumulative_table AS (
-    SELECT yearID, teamID,
-           ROUND(salary/1000000,2) AS salary_millions,
-           SUM(salary) OVER(PARTITION BY teamID ORDER BY yearID) AS cumulative_salary
-    FROM team_salary
-)
-SELECT yearID, teamID, team_salary_in_billions
-FROM (
-    SELECT yearID, teamID,
-           ROUND(cumulative_salary/1000000000,2) AS team_salary_in_billions,
-           ROW_NUMBER() OVER(PARTITION BY teamID ORDER BY yearID) AS year_rank
-    FROM cumulative_table 
-    WHERE cumulative_salary >= 1000000000
-) rt
-WHERE year_rank = 1
-ORDER BY yearID;
 
+![Screenshot 2025-03-31 113103](https://github.com/user-attachments/assets/3785df05-1888-4639-b660-2c5a04b80ac7)
+
+**Result:**
+
+![Screenshot 2025-03-31 113245](https://github.com/user-attachments/assets/3a8276d9-9cc5-4907-ab07-904853c6e2e3)
 
 **Insight:** Top teams reached $1B in cumulative spending by the early 2010s, driven by rising player salaries.
 
@@ -114,34 +79,25 @@ ORDER BY yearID;
 
 ### Key Queries & Results
 #### Career Longevity
-SELECT 
-    playerID, nameGiven,
-    TIMESTAMPDIFF(YEAR, debut, finalgame) AS career_length
-FROM players
-WHERE TIMESTAMPDIFF(YEAR, debut, finalgame) IS NOT NULL
-ORDER BY career_length DESC;
 
+![Screenshot 2025-03-31 123311](https://github.com/user-attachments/assets/c75d3370-5bc8-4bb2-a45f-f9be83edb29e)
 
+**Result:**
 
-- **Longest Career**: 38 years (Nicholas).
+![Screenshot 2025-03-31 124203](https://github.com/user-attachments/assets/407287cb-8a01-42b7-88bd-ef406ad107c4)
+
+- **Longest Career**: 35 years (Nicholas).
 - **Average Career**: 6.5 years (excluding players with careers shorter than a year).
 
 **Insight:** Short careers are common, likely due to competitive pressures and injuries.
 
 #### Players with 10+ Years on the Same Team
-WITH pt AS (
-    SELECT p.playerID, p.namegiven, p.debut,
-           s.teamID AS starting_team,
-           e.teamID AS ending_team
-    FROM players p 
-    INNER JOIN salaries s ON p.playerID = s.playerID AND s.yearID = YEAR(p.debut)
-    INNER JOIN salaries e ON p.playerID = e.playerID AND e.yearID = YEAR(p.finalGame)
-)
-SELECT nameGiven, starting_team, ending_team,
-       TIMESTAMPDIFF(YEAR, debut, finalgame) AS career_length
-FROM pt
-WHERE TIMESTAMPDIFF(YEAR, debut, finalgame) >= 10 AND starting_team = ending_team
-ORDER BY career_length;
+
+![Screenshot 2025-03-31 130310](https://github.com/user-attachments/assets/7e21306f-ae0d-4b76-a7dc-cd120ccb9f46)
+
+**Result:**
+
+![Screenshot 2025-03-31 130431](https://github.com/user-attachments/assets/c551d853-2d23-47f1-af0a-e0fedcf296ab)
 
 **Insight:** Only 0.14% of players (25 total) stayed with one team for over a decade, highlighting free agency’s impact.
 
@@ -154,46 +110,30 @@ ORDER BY career_length;
 
 ### Key Queries & Results
 #### Players Sharing Birthdays
-WITH bd AS (
-    SELECT playerId, namegiven, 
-           CAST(CONCAT_WS('-', birthYear, birthMonth, birthday) AS DATE) AS birthdate 
-    FROM players
-)
-SELECT birthdate, GROUP_CONCAT(CONCAT(playerID,"- ",namegiven) SEPARATOR ", ") AS player_names
-FROM bd
-WHERE birthdate IS NOT NULL
-GROUP BY birthdate
-HAVING COUNT(*) > 1
-ORDER BY birthdate;
+
+![Screenshot 2025-03-31 131651](https://github.com/user-attachments/assets/72b1e3c9-4f9b-45bd-a5c1-06969fb0dcdd)
+
+**Result:**
+
+![Screenshot 2025-03-31 132011](https://github.com/user-attachments/assets/5b6242d5-3a8a-4646-a416-a78bc3f4af2c)
 
 #### Batting Hand Distribution
-SELECT teamID,
-    ROUND((SUM(CASE WHEN bats = 'R' THEN 1 END)/COUNT(bats)*100),2) AS right_hand_pct,
-    ROUND((SUM(CASE WHEN bats = 'L' THEN 1 END)/COUNT(bats)*100),2) AS left_hand_pct,
-    ROUND((SUM(CASE WHEN bats = 'B' THEN 1 END)/COUNT(bats)*100),2) AS ambidextrous_pct
-FROM players 
-GROUP BY teamID;
 
+![Screenshot 2025-03-31 133343](https://github.com/user-attachments/assets/43108602-31c0-4395-a540-09ea300739e4)
+
+**Result:**
+
+![Screenshot 2025-03-31 133444](https://github.com/user-attachments/assets/bc9e258a-fb5e-41ec-9275-87f9560fa0bb)
 
 **Insight:** Right-handed batters dominate, reflecting traditional training focus.
 
 #### Height/Weight Trends Over Decades
-WITH decade AS (
-				SELECT 
-						FLOOR(YEAR(debut)/10)*10 AS debut_decade, 
-						AVG(weight) AS avg_weight,
-						AVG(height) AS avg_height
-				FROM     players
-				WHERE    debut is not null
-				GROUP BY debut_decade
-				ORDER BY debut_decade)
-                
-SELECT  debut_decade,avg_weight,
-		avg_weight - LAG(avg_weight) OVER(ORDER BY debut_decade) AS decade_diff_avgweight,
-        avg_height,
-        avg_height - LAG(avg_height) OVER(ORDER BY debut_decade) AS decade_diff_avgheight
-FROM decade;
 
+![Screenshot 2025-03-31 133727](https://github.com/user-attachments/assets/98c1a243-6802-4a85-a85e-45c54f910491)
+
+**Result:**
+
+![Screenshot 2025-03-31 133830](https://github.com/user-attachments/assets/df812922-5d5c-4078-bafc-832d06d77863)
 
 ---
 
@@ -206,15 +146,6 @@ FROM decade;
 
 ---
 
-## Usage
-To run this analysis, ensure you have access to a SQL database containing the relevant tables. Execute the provided queries to reproduce the insights.
 
-## Contributing
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
----
-
-### Notes
-- Ensure all images referenced in this README exist in the `/images/` folder within your GitHub repository.
-- You may need to update image filenames if they differ from the placeholders used above.
 
