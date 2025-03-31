@@ -24,6 +24,10 @@ This project analyzes a baseball dataset to uncover trends in player development
 
 ![Screenshot 2025-03-31 100216](https://github.com/user-attachments/assets/54bf8fe8-21ba-4bdf-bdf2-e8acd1081143)
 
+**Result:**
+
+![Screenshot 2025-03-31 100749](https://github.com/user-attachments/assets/dc8199ea-6c72-40d2-b469-972580e74a28)
+
 **Insight:** Schools in California, Texas, and Florida dominate due to robust athletic programs and year-round training climates.
 
 #### Top 3 Schools per Decade
