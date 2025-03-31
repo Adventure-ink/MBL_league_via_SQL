@@ -21,14 +21,8 @@ This project analyzes a baseball dataset to uncover trends in player development
 
 ### Key Queries & Results
 #### Top 5 Schools by Player Count
-SELECT 
-    name_full AS university,
-    COUNT(DISTINCT playerID) AS players
-FROM schools s 
-LEFT JOIN school_details sd ON s.schoolID = sd.schoolID
-GROUP BY university
-ORDER BY players DESC
-LIMIT 5;
+
+![Screenshot 2025-03-31 100216](https://github.com/user-attachments/assets/54bf8fe8-21ba-4bdf-bdf2-e8acd1081143)
 
 **Insight:** Schools in California, Texas, and Florida dominate due to robust athletic programs and year-round training climates.
 
