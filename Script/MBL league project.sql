@@ -4,15 +4,12 @@ SELECT * FROM schools;
 SELECT * FROM school_details;
 
 -- 2. In each decade, how many schools were there that produced players?
-SELECT 	
-		sd.name_full AS university,sd.city,
-        COUNT(DISTINCT(s.playerID)) AS player_num,
-        FLOOR(s.yearID/10)*10 AS decade 
-FROM 	school_details sd LEFT JOIN schools s 
-ON 		sd.schoolID = s.schoolID
-WHERE FLOOR(s.yearID/10)*10 IS NOT NULL
-GROUP BY university,sd.city,decade
-ORDER BY decade;
+SELECT 
+			FLOOR(yearID/10)*10 AS decade,
+			COUNT(DISTINCT(schoolID)) AS schools_num 
+FROM 		schools
+GROUP BY 	decade
+order by 	decade; 
 
 -- 3. What are the names of the top 5 schools that produced the most players?
 SELECT 
@@ -26,20 +23,22 @@ LIMIT 5;
 
 -- 4. For each decade, what were the names of the top 3 schools that produced the most players?
 
-with university AS (SELECT 	
-								sd.name_full AS university,sd.city,
-								COUNT(DISTINCT(s.playerID)) AS players,
-								FLOOR(s.yearID/10)*10 AS decade 
-						FROM 	school_details sd LEFT JOIN schools s 
-						ON 		sd.schoolID = s.schoolID
-						WHERE FLOOR(s.yearID/10)*10 IS NOT NULL
+with university AS (
+					   SELECT 	
+								 sd.name_full AS university,sd.city,
+								 COUNT(DISTINCT(s.playerID)) AS players,
+								 FLOOR(s.yearID/10)*10 AS decade 
+						FROM 	 school_details sd LEFT JOIN schools s 
+						ON 		 sd.schoolID = s.schoolID
+						WHERE 	 FLOOR(s.yearID/10)*10 IS NOT NULL
 						GROUP BY university,sd.city,decade
 						ORDER BY decade),
 
-top_3 AS  (SELECT 
+top_3 AS  (
+			SELECT 
 					university,decade,players,
-                    DENSE_RANK() OVER(PARTITION BY decade ORDER BY players DESC) AS ranking 
-                    FROM university) 
+					DENSE_RANK() OVER(PARTITION BY decade ORDER BY players DESC) AS ranking 
+			FROM    university) 
                     -- I used dense_rank instead of using rank or row_number because it give me accurate ranking for university which have same number of players 
 SELECT * 
 FROM top_3
@@ -121,8 +120,24 @@ SELECT
             TIMESTAMPDIFF(YEAR,debut,finalgame) AS career_length
             
 FROM 		players
-            
+WHERE 		TIMESTAMPDIFF(YEAR,debut,finalgame) IS NOT NULL
 ORDER BY 	career_length DESC;
+
+-- Average and longest career
+
+SELECT 
+		AVG(career_length) AS average_career, 
+        MAX(career_length) AS longest_career
+FROM    (SELECT 
+				playerID,nameGiven,
+				CAST(CONCAT_WS("-",birthYear,birthMonth,birthday) AS DATE) AS birthdate,
+				TIMESTAMPDIFF(YEAR,CAST(CONCAT_WS("-",birthYear,birthMonth,birthday) AS DATE),debut) AS debut_yr_age,
+				TIMESTAMPDIFF(YEAR,CAST(CONCAT_WS("-",birthYear,birthMonth,birthday)AS DATE),finalGame) AS retired_yr_age,
+				TIMESTAMPDIFF(YEAR,debut,finalgame) AS career_length
+            
+		 FROM 		players
+		WHERE 		TIMESTAMPDIFF(YEAR,debut,finalgame) IS NOT NULL AND TIMESTAMPDIFF(YEAR,debut,finalgame) >0
+		ORDER BY 	career_length DESC) t;
 
 
 -- 3. What team did each player play on for their starting and ending years and what their salary?
@@ -164,6 +179,7 @@ WHERE   TIMESTAMPDIFF(YEAR,debut,finalgame) >= 10
 		AND starting_team = ending_team
 ORDER BY career_length;
 
+
 -- PART IV: PLAYER COMPARISON ANALYSIS
 -- 1. View the players table
 
@@ -195,7 +211,7 @@ WITH bd AS (
            CAST(CONCAT_WS('-', birthYear, birthMonth, birthday) AS DATE) AS birthdate 
     FROM players)
     
-SELECT birthdate, GROUP_CONCAT(CONCAT(playerID,"- ",namegiven) SEPARATOR ", ") AS player_names FROM bd
+SELECT birthdate, (GROUP_CONCAT(CONCAT(playerID,"- ",namegiven) SEPARATOR ", ")) AS player_names FROM bd
 WHERE birthdate IS NOT NULL
 GROUP BY birthdate
 HAVING COUNT(*) > 1
@@ -249,6 +265,6 @@ SELECT  debut_decade,avg_weight,
         avg_height,
         avg_height - LAG(avg_height) OVER(ORDER BY debut_decade) AS decade_diff_avgheight
 FROM decade;
-		
+
 					
 
